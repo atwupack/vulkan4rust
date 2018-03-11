@@ -1,0 +1,2 @@
+[workspace]
+members = ["vulkan-tutorial", "vulkano-glfw"]
