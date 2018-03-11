@@ -2,6 +2,7 @@ addons:
   apt:
     packages:
     - libxrandr-dev
+    - libxinerama-dev
     - cmake
 language: rust
 rust:
