@@ -4,6 +4,7 @@ addons:
     - libxrandr-dev
     - libxinerama-dev
     - libxcursor-dev
+    - libxi-dev
     - cmake
 language: rust
 rust:
