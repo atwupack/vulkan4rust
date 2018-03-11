@@ -65,6 +65,13 @@ pub fn create_window_surface(instance: Arc<Instance>, window: &Window ) -> Resul
 
 /// create InstanceExtensions from required GLFW extensions
 pub fn get_required_instance_extensions(glfw: &Glfw) -> Result<InstanceExtensions, VulkanoGlfwError> {
+    get_required_raw_instance_extensions(glfw).and_then(|rie| {
+        Ok(InstanceExtensions::from(&rie))
+    })
+}
+
+/// create RawInstanceExtensions from required GLFW extensions
+pub fn get_required_raw_instance_extensions(glfw: &Glfw) -> Result<RawInstanceExtensions, VulkanoGlfwError> {
     let exts = glfw.get_required_instance_extensions();
     if exts.is_none() {
         return Err(VulkanoGlfwError::NoExtensions);
@@ -75,9 +82,7 @@ pub fn get_required_instance_extensions(glfw: &Glfw) -> Result<InstanceExtension
         new_c_string.unwrap()
     });
 
-    let raw_extensions = RawInstanceExtensions::new(iter);
-
-    Ok(InstanceExtensions::from(&raw_extensions))
+    Ok(RawInstanceExtensions::new(iter))
 }
 
 /// This function returns whether the specified queue family of the specified physical device supports presentation to the platform GLFW was built for.

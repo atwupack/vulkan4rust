@@ -1,9 +1,9 @@
 [package]
 name = "vulkano-glfw"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["André Twupack <atwupack@mailbox.org>"]
 description = "Utility functions to use GLFW with Vulkano"
-repository = "https://github.com/atwupack/vulkano-glfw"
+repository = "https://github.com/atwupack/vulkan4rust"
 license = "MIT"
 
 [dependencies]
