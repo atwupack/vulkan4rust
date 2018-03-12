@@ -16,6 +16,7 @@ use triangle::validation_layers;
 use triangle::physical_device_selection;
 use triangle::logical_device;
 use triangle::window_surface;
+use triangle::swap_chain_creation;
 
 
 struct Command<'a> {
@@ -24,7 +25,7 @@ struct Command<'a> {
     main_function: fn(),
 }
 
-const TUTORIALS: &[Command; 6] = &[
+const TUTORIALS: &[Command; 7] = &[
     Command {
         name: "00_base_code",
         description: "Base code",
@@ -54,6 +55,11 @@ const TUTORIALS: &[Command; 6] = &[
         name: "05_window_surface",
         description: "Window surface",
         main_function: window_surface::app_main,
+    },
+    Command {
+        name: "06_swap_chain_creation",
+        description: "Swap chain",
+        main_function: swap_chain_creation::app_main,
     }
 ];
 

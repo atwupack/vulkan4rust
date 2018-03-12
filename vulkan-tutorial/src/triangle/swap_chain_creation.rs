@@ -112,7 +112,11 @@ fn create_logical_device<'a>(glfw: &Glfw, phys: PhysicalDevice<'a>) -> (Arc<Devi
 
 fn is_device_suitable<'a>(glfw: &Glfw, device: &PhysicalDevice<'a>) -> bool {
     let family = find_queue_families(glfw, device);
-    family.is_some()
+    family.is_some() && check_device_extension_support(device)
+}
+
+fn check_device_extension_support(device: &PhysicalDevice) -> bool {
+    true
 }
 
 fn find_queue_families<'a>(glfw: &Glfw, device: &PhysicalDevice<'a> ) -> Option<QueueFamily<'a>> {

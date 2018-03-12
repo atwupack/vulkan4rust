@@ -8,8 +8,8 @@ license = "MIT"
 
 
 [dependencies]
-clap = "2.30.0"
-vulkano = "0.7.2"
-vk-sys = "0.3.2"
-glfw ={version = "0.21.0", features = ["vulkan"]}
-vulkano-glfw = { version = "0.4.0", path = "../vulkano-glfw" }
+clap = "^2.30"
+vulkano = "^0.8"
+vk-sys = "^0.3"
+glfw ={version = "^0.21", features = ["vulkan"]}
+vulkano-glfw = { version = "0.5.0", path = "../vulkano-glfw" }

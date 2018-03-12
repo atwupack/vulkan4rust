@@ -48,7 +48,7 @@ impl fmt::Display for VulkanoGlfwError {
 }
 
 /// Create a surface from a GLFW window
-pub fn create_window_surface(instance: Arc<Instance>, window: &Window ) -> Result<Arc<Surface>, VulkanoGlfwError> {
+pub fn create_window_surface(instance: Arc<Instance>, window: Window ) -> Result<Arc<Surface<Window>>, VulkanoGlfwError> {
     let internal_instance = instance.as_ref().internal_object();
     let internal_window = window.window_ptr();
     let mut internal_surface: vk_sys::SurfaceKHR = 0;
@@ -59,7 +59,7 @@ pub fn create_window_surface(instance: Arc<Instance>, window: &Window ) -> Resul
         return Err(VulkanoGlfwError::GlfwError { code: result });
     }
     Ok(Arc::new(unsafe {
-        Surface::from_raw_surface(instance, internal_surface)
+        Surface::from_raw_surface(instance, internal_surface, window)
     }))
 }
 
