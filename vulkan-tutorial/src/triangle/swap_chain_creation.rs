@@ -4,7 +4,7 @@ use glfw::{Glfw,Window,WindowMode,WindowHint,ClientApiHint};
 use vulkano::instance;
 use vulkano::instance::{Features, ApplicationInfo, Version, Instance, InstanceExtensions, PhysicalDevice, QueueFamily, DeviceExtensions};
 use vulkano::instance::debug::{DebugCallback, Message};
-use vulkano::device::{Device, QueuesIter, Queue};
+use vulkano::device::{Device, Queue};
 use vulkano::swapchain::Surface;
 
 use vulkano_glfw as vg;
@@ -70,8 +70,13 @@ impl<'a> HelloTriangleApplication {
 
         let surface = create_surface(&instance, window);
 
-        let physical_device = pick_physical_device(&glfw, &instance).unwrap();
-        let (device, graphics_queue, present_queue) = create_logical_device(&glfw, physical_device);
+        let req_dev_exts = DeviceExtensions {
+            khr_swapchain: true,
+            .. DeviceExtensions::none()
+        };
+
+        let physical_device = pick_physical_device(&glfw, &instance, &req_dev_exts).unwrap();
+        let (device, graphics_queue, present_queue) = create_logical_device(&glfw, physical_device, &req_dev_exts);
 
         HelloTriangleApplication {
             glfw: glfw,
@@ -91,9 +96,9 @@ fn create_surface(instance: &Arc<Instance>, window: Window ) -> Arc<Surface<Wind
     vg::create_window_surface(instance.clone(), window).unwrap()
 }
 
-fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>) -> Option<PhysicalDevice<'a>> {
+fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>, req_exts: &DeviceExtensions) -> Option<PhysicalDevice<'a>> {
     for device in PhysicalDevice::enumerate(instance) {
-        if is_device_suitable(glfw, &device) {
+        if is_device_suitable(glfw, device, req_exts) {
             println!("Using device: {}", device.name());
             return Some(device);
         }
@@ -101,25 +106,26 @@ fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>) -> Option<
     None
 }
 
-fn create_logical_device<'a>(glfw: &Glfw, phys: PhysicalDevice<'a>) -> (Arc<Device>, Arc<Queue>, Arc<Queue>) {
-    let family = find_queue_families(glfw, &phys).unwrap();
+fn create_logical_device<'a>(glfw: &Glfw, phys: PhysicalDevice<'a>, req_exts: &DeviceExtensions) -> (Arc<Device>, Arc<Queue>, Arc<Queue>) {
+    let family = find_queue_families(glfw, phys).unwrap();
     let (device, mut qiter) = Device::new(phys, &Features::none(), 
-                                &DeviceExtensions::none(), 
+                                req_exts, 
                                 vec![(family, 1.0)]).unwrap();
     let queue = qiter.next().unwrap();
     (device, queue.clone(), queue.clone())
 }
 
-fn is_device_suitable<'a>(glfw: &Glfw, device: &PhysicalDevice<'a>) -> bool {
+fn is_device_suitable<'a>(glfw: &Glfw, device: PhysicalDevice<'a>, req_exts: &DeviceExtensions) -> bool {
     let family = find_queue_families(glfw, device);
-    family.is_some() && check_device_extension_support(device)
+    family.is_some() && check_device_extension_support(device, req_exts)
 }
 
-fn check_device_extension_support(device: &PhysicalDevice) -> bool {
-    true
+fn check_device_extension_support(device: PhysicalDevice, req_exts: &DeviceExtensions) -> bool {
+    let supported_ext = DeviceExtensions::supported_by_device(device);
+    req_exts.intersection(&supported_ext) == *req_exts
 }
 
-fn find_queue_families<'a>(glfw: &Glfw, device: &PhysicalDevice<'a> ) -> Option<QueueFamily<'a>> {
+fn find_queue_families<'a>(glfw: &Glfw, device: PhysicalDevice<'a> ) -> Option<QueueFamily<'a>> {
     for family in device.queue_families() {
         if family.supports_graphics() && vg::get_physical_device_presentation_support(glfw, &family)  {
             return Some(family);

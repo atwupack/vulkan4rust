@@ -4,7 +4,7 @@ use glfw::{Glfw,Window,WindowMode,WindowHint,ClientApiHint};
 use vulkano::instance;
 use vulkano::instance::{Features, ApplicationInfo, Version, Instance, InstanceExtensions, PhysicalDevice, QueueFamily, DeviceExtensions};
 use vulkano::instance::debug::{DebugCallback, Message};
-use vulkano::device::{Device, QueuesIter, Queue};
+use vulkano::device::{Device, Queue};
 
 use vulkano_glfw as vg;
 
