@@ -5,7 +5,8 @@ use vulkano::instance;
 use vulkano::instance::{Features, ApplicationInfo, Version, Instance, InstanceExtensions, PhysicalDevice, QueueFamily, DeviceExtensions};
 use vulkano::instance::debug::{DebugCallback, Message};
 use vulkano::device::{Device, Queue};
-use vulkano::swapchain::Surface;
+use vulkano::swapchain::{Surface, Capabilities, SupportedPresentModes, ColorSpace, PresentMode};
+use vulkano::format::Format;
 
 use vulkano_glfw as vg;
 
@@ -75,7 +76,7 @@ impl<'a> HelloTriangleApplication {
             .. DeviceExtensions::none()
         };
 
-        let physical_device = pick_physical_device(&glfw, &instance, &req_dev_exts).unwrap();
+        let physical_device = pick_physical_device(&glfw, &instance, &req_dev_exts, &surface).unwrap();
         let (device, graphics_queue, present_queue) = create_logical_device(&glfw, physical_device, &req_dev_exts);
 
         HelloTriangleApplication {
@@ -92,13 +93,47 @@ impl<'a> HelloTriangleApplication {
     }
 }
 
+fn query_swap_chain_support(surface: &Surface<Window>, device: PhysicalDevice) -> Capabilities {
+    surface.capabilities(device).unwrap()  
+}
+
+fn choose_swap_surface_format(caps: Capabilities) -> (Format, ColorSpace) {
+    let avail_formats = caps.supported_formats;
+    if avail_formats.len() == 0 {
+        (Format::B8G8R8Unorm, ColorSpace::SrgbNonLinear)
+    }
+    else {
+        if avail_formats.contains(&(Format::B8G8R8Unorm, ColorSpace::SrgbNonLinear)) {
+            (Format::B8G8R8Unorm, ColorSpace::SrgbNonLinear)
+        }
+        else {
+            avail_formats[0]
+        }
+    }
+}
+
+fn choose_swap_present_mode(caps: Capabilities) -> PresentMode {
+    let avail_modes = caps.present_modes;
+    if avail_modes.mailbox {
+        PresentMode::Mailbox
+    }
+    else {
+        if avail_modes.immediate {
+            PresentMode::Immediate
+        }
+        else {
+            PresentMode::Fifo
+        }
+    }
+} 
+
 fn create_surface(instance: &Arc<Instance>, window: Window ) -> Arc<Surface<Window>> {
     vg::create_window_surface(instance.clone(), window).unwrap()
 }
 
-fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>, req_exts: &DeviceExtensions) -> Option<PhysicalDevice<'a>> {
+fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>, req_exts: &DeviceExtensions, surface: &Surface<Window>) -> Option<PhysicalDevice<'a>> {
     for device in PhysicalDevice::enumerate(instance) {
-        if is_device_suitable(glfw, device, req_exts) {
+        if is_device_suitable(glfw, device, req_exts, surface) {
             println!("Using device: {}", device.name());
             return Some(device);
         }
@@ -115,9 +150,11 @@ fn create_logical_device<'a>(glfw: &Glfw, phys: PhysicalDevice<'a>, req_exts: &D
     (device, queue.clone(), queue.clone())
 }
 
-fn is_device_suitable<'a>(glfw: &Glfw, device: PhysicalDevice<'a>, req_exts: &DeviceExtensions) -> bool {
+fn is_device_suitable<'a>(glfw: &Glfw, device: PhysicalDevice<'a>, req_exts: &DeviceExtensions, surface: &Surface<Window>) -> bool {
     let family = find_queue_families(glfw, device);
-    family.is_some() && check_device_extension_support(device, req_exts)
+    let caps = query_swap_chain_support(surface, device);
+    family.is_some() && check_device_extension_support(device, req_exts) 
+        && !caps.supported_formats.is_empty() && caps.present_modes != SupportedPresentModes::none()
 }
 
 fn check_device_extension_support(device: PhysicalDevice, req_exts: &DeviceExtensions) -> bool {
