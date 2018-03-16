@@ -5,13 +5,16 @@ use vulkano::instance;
 use vulkano::instance::{Features, ApplicationInfo, Version, Instance, InstanceExtensions, PhysicalDevice, QueueFamily, DeviceExtensions};
 use vulkano::instance::debug::{DebugCallback, Message};
 use vulkano::device::{Device, Queue};
-use vulkano::swapchain::{Surface, Capabilities, SupportedPresentModes, ColorSpace, PresentMode};
+use vulkano::swapchain::{Surface, Capabilities, SupportedPresentModes, ColorSpace, PresentMode, Swapchain, CompositeAlpha};
 use vulkano::format::Format;
+use vulkano::image::{ImageUsage, SwapchainImage};
+use vulkano::sync::SharingMode;
 
 use vulkano_glfw as vg;
 
 use std::borrow::Cow;
 use std::sync::Arc;
+use std::cmp::{min, max};
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
@@ -40,6 +43,10 @@ struct HelloTriangleApplication {
     _graphics_queue: Arc<Queue>,
     _present_queue: Arc<Queue>,
     surface: Arc<Surface<Window>>,
+    _swap_chain: Arc<Swapchain<Window>>,
+    _swap_chain_images: Vec<Arc<SwapchainImage<Window>>>,
+    _swap_chain_image_format: Format,
+    _swap_chain_extend: [u32; 2],
 }
 
 impl<'a> HelloTriangleApplication {
@@ -79,6 +86,8 @@ impl<'a> HelloTriangleApplication {
         let physical_device = pick_physical_device(&glfw, &instance, &req_dev_exts, &surface).unwrap();
         let (device, graphics_queue, present_queue) = create_logical_device(&glfw, physical_device, &req_dev_exts);
 
+        let (swap_chain, images, format, extend) = create_swap_chain(&device, &surface, &graphics_queue);
+
         HelloTriangleApplication {
             glfw: glfw,
             //window: window,
@@ -89,16 +98,57 @@ impl<'a> HelloTriangleApplication {
             _graphics_queue: graphics_queue,
             _present_queue: present_queue,
             surface: surface,
+            _swap_chain: swap_chain,
+            _swap_chain_images: images,
+            _swap_chain_image_format: format,
+            _swap_chain_extend: extend,
         }
     }
 }
 
-fn query_swap_chain_support(surface: &Surface<Window>, device: PhysicalDevice) -> Capabilities {
-    surface.capabilities(device).unwrap()  
+fn query_swap_chain_support(surface: &Arc<Surface<Window>>, device: PhysicalDevice) -> Capabilities {
+    surface.capabilities(device).unwrap()
 }
 
-fn choose_swap_surface_format(caps: Capabilities) -> (Format, ColorSpace) {
-    let avail_formats = caps.supported_formats;
+fn create_swap_chain(device: &Arc<Device>, surface: &Arc<Surface<Window>>, queue: &Arc<Queue>) -> (Arc<Swapchain<Window>>, Vec<Arc<SwapchainImage<Window>>>, Format, [u32;2]) {
+    let caps = query_swap_chain_support(&surface, device.physical_device());
+
+    let req_image_count = caps.min_image_count + 1;
+    let image_count = match caps.max_image_count {
+        Some(max_image) => if req_image_count > max_image {
+            max_image
+        }
+        else {
+            req_image_count
+        }
+        None => req_image_count,
+    };
+
+    let (format, _color_space) = choose_swap_surface_format(&caps);
+    let extend = choose_swap_extend(&caps);
+
+    let (swap_chain, images) = Swapchain::new(device.clone(),
+                        surface.clone(),
+                        image_count,
+                        format,
+                        extend,
+                        1, // layers
+                        ImageUsage {
+                            color_attachment: true,
+                            .. ImageUsage::none()
+                        },
+                        SharingMode::from(queue),
+                        caps.current_transform,
+                        CompositeAlpha::Opaque,
+                        choose_swap_present_mode(&caps),
+                        true, // clipped
+                        None // old swapchain
+                        ).unwrap();
+    (swap_chain, images, format, extend)
+}
+
+fn choose_swap_surface_format(caps: &Capabilities) -> (Format, ColorSpace) {
+    let avail_formats = &caps.supported_formats;
     if avail_formats.len() == 0 {
         (Format::B8G8R8Unorm, ColorSpace::SrgbNonLinear)
     }
@@ -112,7 +162,7 @@ fn choose_swap_surface_format(caps: Capabilities) -> (Format, ColorSpace) {
     }
 }
 
-fn choose_swap_present_mode(caps: Capabilities) -> PresentMode {
+fn choose_swap_present_mode(caps: &Capabilities) -> PresentMode {
     let avail_modes = caps.present_modes;
     if avail_modes.mailbox {
         PresentMode::Mailbox
@@ -125,13 +175,24 @@ fn choose_swap_present_mode(caps: Capabilities) -> PresentMode {
             PresentMode::Fifo
         }
     }
-} 
+}
+
+fn choose_swap_extend(caps: &Capabilities) -> [u32;2] {
+    match caps.current_extent {
+        Some(e) => e,
+        None => {
+            let width = max(caps.min_image_extent[0], min(caps.max_image_extent[0], WIDTH));
+            let height = max(caps.min_image_extent[1], min(caps.max_image_extent[1], HEIGHT));
+            [width, height]
+        }
+    }
+}
 
 fn create_surface(instance: &Arc<Instance>, window: Window ) -> Arc<Surface<Window>> {
     vg::create_window_surface(instance.clone(), window).unwrap()
 }
 
-fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>, req_exts: &DeviceExtensions, surface: &Surface<Window>) -> Option<PhysicalDevice<'a>> {
+fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>, req_exts: &DeviceExtensions, surface: &Arc<Surface<Window>>) -> Option<PhysicalDevice<'a>> {
     for device in PhysicalDevice::enumerate(instance) {
         if is_device_suitable(glfw, device, req_exts, surface) {
             println!("Using device: {}", device.name());
@@ -143,17 +204,17 @@ fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>, req_exts: 
 
 fn create_logical_device<'a>(glfw: &Glfw, phys: PhysicalDevice<'a>, req_exts: &DeviceExtensions) -> (Arc<Device>, Arc<Queue>, Arc<Queue>) {
     let family = find_queue_families(glfw, phys).unwrap();
-    let (device, mut qiter) = Device::new(phys, &Features::none(), 
-                                req_exts, 
+    let (device, mut qiter) = Device::new(phys, &Features::none(),
+                                req_exts,
                                 vec![(family, 1.0)]).unwrap();
     let queue = qiter.next().unwrap();
     (device, queue.clone(), queue.clone())
 }
 
-fn is_device_suitable<'a>(glfw: &Glfw, device: PhysicalDevice<'a>, req_exts: &DeviceExtensions, surface: &Surface<Window>) -> bool {
+fn is_device_suitable<'a>(glfw: &Glfw, device: PhysicalDevice<'a>, req_exts: &DeviceExtensions, surface: &Arc<Surface<Window>>) -> bool {
     let family = find_queue_families(glfw, device);
     let caps = query_swap_chain_support(surface, device);
-    family.is_some() && check_device_extension_support(device, req_exts) 
+    family.is_some() && surface.is_supported(family.unwrap()).unwrap() && check_device_extension_support(device, req_exts)
         && !caps.supported_formats.is_empty() && caps.present_modes != SupportedPresentModes::none()
 }
 
@@ -166,7 +227,7 @@ fn find_queue_families<'a>(glfw: &Glfw, device: PhysicalDevice<'a> ) -> Option<Q
     for family in device.queue_families() {
         if family.supports_graphics() && vg::get_physical_device_presentation_support(glfw, &family)  {
             return Some(family);
-        } 
+        }
     };
 
     None
