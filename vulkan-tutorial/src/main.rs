@@ -17,6 +17,8 @@ use triangle::physical_device_selection;
 use triangle::logical_device;
 use triangle::window_surface;
 use triangle::swap_chain_creation;
+use triangle::image_views;
+use triangle::graphics_pipeline;
 
 
 struct Command<'a> {
@@ -25,7 +27,7 @@ struct Command<'a> {
     main_function: fn(),
 }
 
-const TUTORIALS: &[Command; 7] = &[
+const TUTORIALS: &[Command; 9] = &[
     Command {
         name: "00_base_code",
         description: "Base code",
@@ -60,6 +62,16 @@ const TUTORIALS: &[Command; 7] = &[
         name: "06_swap_chain_creation",
         description: "Swap chain",
         main_function: swap_chain_creation::app_main,
+    },
+    Command {
+        name: "07_image_views",
+        description: "Image views",
+        main_function: image_views::app_main,
+    },
+    Command {
+        name: "08_graphics_pipeline",
+        description: "Graphics pipeline",
+        main_function: graphics_pipeline::app_main,
     }
 ];
 

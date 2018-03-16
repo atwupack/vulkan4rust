@@ -5,3 +5,5 @@ pub mod physical_device_selection;
 pub mod logical_device;
 pub mod window_surface;
 pub mod swap_chain_creation;
+pub mod image_views;
+pub mod graphics_pipeline;
