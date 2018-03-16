@@ -10,15 +10,15 @@ extern crate vulkano_glfw;
 mod triangle;
 mod util;
 
-use triangle::base_code;
-use triangle::instance_creation;
-use triangle::validation_layers;
-use triangle::physical_device_selection;
-use triangle::logical_device;
-use triangle::window_surface;
-use triangle::swap_chain_creation;
-use triangle::image_views;
-use triangle::graphics_pipeline;
+use triangle::setup::base_code;
+use triangle::setup::instance_creation;
+use triangle::setup::validation_layers;
+use triangle::setup::physical_device_selection;
+use triangle::setup::logical_device;
+use triangle::presentation::window_surface;
+use triangle::presentation::swap_chain_creation;
+use triangle::presentation::image_views;
+use triangle::pipeline::graphics_pipeline;
 
 
 struct Command<'a> {

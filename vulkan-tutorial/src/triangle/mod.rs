@@ -1,9 +1,3 @@
-pub mod base_code;
-pub mod instance_creation;
-pub mod validation_layers;
-pub mod physical_device_selection;
-pub mod logical_device;
-pub mod window_surface;
-pub mod swap_chain_creation;
-pub mod image_views;
-pub mod graphics_pipeline;
+pub mod setup;
+pub mod presentation;
+pub mod pipeline;
