@@ -45,8 +45,6 @@ struct HelloTriangleApplication {
     surface: Arc<Surface<Window>>,
     _swap_chain: Arc<Swapchain<Window>>,
     _swap_chain_images: Vec<Arc<SwapchainImage<Window>>>,
-    _swap_chain_image_format: Format,
-    _swap_chain_extend: [u32; 2],
 }
 
 impl<'a> HelloTriangleApplication {
@@ -86,7 +84,7 @@ impl<'a> HelloTriangleApplication {
         let physical_device = pick_physical_device(&glfw, &instance, &req_dev_exts, &surface).unwrap();
         let (device, graphics_queue, present_queue) = create_logical_device(&glfw, physical_device, &req_dev_exts);
 
-        let (swap_chain, images, format, extend) = create_swap_chain(&device, &surface, &graphics_queue);
+        let (swap_chain, images) = create_swap_chain(&device, &surface, &graphics_queue);
 
         create_image_views();
 
@@ -102,8 +100,6 @@ impl<'a> HelloTriangleApplication {
             surface: surface,
             _swap_chain: swap_chain,
             _swap_chain_images: images,
-            _swap_chain_image_format: format,
-            _swap_chain_extend: extend,
         }
     }
 }
@@ -116,7 +112,7 @@ fn query_swap_chain_support(surface: &Arc<Surface<Window>>, device: PhysicalDevi
     surface.capabilities(device).unwrap()
 }
 
-fn create_swap_chain(device: &Arc<Device>, surface: &Arc<Surface<Window>>, queue: &Arc<Queue>) -> (Arc<Swapchain<Window>>, Vec<Arc<SwapchainImage<Window>>>, Format, [u32;2]) {
+fn create_swap_chain(device: &Arc<Device>, surface: &Arc<Surface<Window>>, queue: &Arc<Queue>) -> (Arc<Swapchain<Window>>, Vec<Arc<SwapchainImage<Window>>>) {
     let caps = query_swap_chain_support(&surface, device.physical_device());
 
     let req_image_count = caps.min_image_count + 1;
@@ -133,7 +129,7 @@ fn create_swap_chain(device: &Arc<Device>, surface: &Arc<Surface<Window>>, queue
     let (format, _color_space) = choose_swap_surface_format(&caps);
     let extend = choose_swap_extend(&caps);
 
-    let (swap_chain, images) = Swapchain::new(device.clone(),
+    Swapchain::new(device.clone(),
                         surface.clone(),
                         image_count,
                         format,
@@ -149,8 +145,7 @@ fn create_swap_chain(device: &Arc<Device>, surface: &Arc<Surface<Window>>, queue
                         choose_swap_present_mode(&caps),
                         true, // clipped
                         None // old swapchain
-                        ).unwrap();
-    (swap_chain, images, format, extend)
+                        ).unwrap()
 }
 
 fn choose_swap_surface_format(caps: &Capabilities) -> (Format, ColorSpace) {

@@ -7,6 +7,8 @@ use vulkano::instance::debug::{DebugCallback, Message};
 use vulkano::device::{Device, Queue};
 use vulkano::swapchain::{Surface, Capabilities, SupportedPresentModes, ColorSpace, PresentMode, Swapchain, CompositeAlpha};
 use vulkano::format::Format;
+use vulkano::framebuffer::{RenderPass, RenderPassDesc};
+use vulkano::pipeline::viewport::{Viewport, Scissor};
 use vulkano::image::{ImageUsage, SwapchainImage};
 use vulkano::sync::SharingMode;
 
@@ -15,6 +17,7 @@ use vulkano_glfw as vg;
 use std::borrow::Cow;
 use std::sync::Arc;
 use std::cmp::{min, max};
+use std::ops::Range;
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
@@ -22,6 +25,57 @@ const HEIGHT: u32 = 600;
 const VALIDATION_LAYERS: &[&str; 1] = &["VK_LAYER_LUNARG_standard_validation"];
 
 const ENABLE_VALIDATION_LAYERS: bool = cfg!(debug_assertions);
+
+mod vs {
+    #[derive(VulkanoShader)]
+    #[ty = "vertex"]
+    #[src = "
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+
+out gl_PerVertex {
+    vec4 gl_Position;
+};
+
+layout(location = 0) out vec3 fragColor;
+
+vec2 positions[3] = vec2[](
+    vec2(0.0, -0.5),
+    vec2(0.5, 0.5),
+    vec2(-0.5, 0.5)
+);
+
+vec3 colors[3] = vec3[](
+    vec3(1.0, 0.0, 0.0),
+    vec3(0.0, 1.0, 0.0),
+    vec3(0.0, 0.0, 1.0)
+);
+
+void main() {
+    gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
+    fragColor = colors[gl_VertexIndex];
+}
+"]
+    struct Dummy;
+}
+
+mod fs {
+    #[derive(VulkanoShader)]
+    #[ty = "fragment"]
+    #[src = "
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+
+layout(location = 0) in vec3 fragColor;
+
+layout(location = 0) out vec4 outColor;
+
+void main() {
+    outColor = vec4(fragColor, 1.0);
+}
+"]
+    struct Dummy;
+}
 
 pub fn app_main() {
     let mut app = HelloTriangleApplication::new();
@@ -86,6 +140,9 @@ impl<'a> HelloTriangleApplication {
 
         let (swap_chain, images) = create_swap_chain(&device, &surface, &graphics_queue);
 
+        create_image_views();
+        create_graphics_pipeline(&device, &swap_chain);
+
         HelloTriangleApplication {
             glfw: glfw,
             //window: window,
@@ -100,6 +157,47 @@ impl<'a> HelloTriangleApplication {
             _swap_chain_images: images,
         }
     }
+}
+
+
+fn create_graphics_pipeline(device: &Arc<Device>, swapchain: &Arc<Swapchain<Window>>) {
+    let vs = vs::Shader::load(device.clone()).expect("failed to create shader module");
+    let fs = fs::Shader::load(device.clone()).expect("failed to create shader module");
+
+    let viewport = Viewport {
+        origin: [0.0, 0.0],
+        dimensions: [swapchain.dimensions()[0] as f32, swapchain.dimensions()[1] as f32],
+        depth_range: Range {
+            start: 0.0,
+            end: 1.0,
+        }
+    };
+
+    let scissor = Scissor {
+        origin: [0,0],
+        dimensions: swapchain.dimensions(),
+    };
+
+    let render_pass = Arc::new(single_pass_renderpass!(device.clone(),
+        attachments: {
+            color: {
+                load: Clear,
+                store: Store,
+                format: swapchain.format(),
+                samples: 1,
+                //stencil_load: DontCare,
+                //stencil_store: DontCare,
+            }
+        },
+        pass: {
+            color: [color],
+            depth_stencil: {}
+        }
+    ).unwrap());
+}
+
+fn create_image_views() {
+    // it seems this is not needed with vulkano
 }
 
 fn query_swap_chain_support(surface: &Arc<Surface<Window>>, device: PhysicalDevice) -> Capabilities {

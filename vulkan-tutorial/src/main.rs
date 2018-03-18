@@ -3,7 +3,12 @@ extern crate glfw;
 extern crate clap;
 use clap::*;
 
+#[macro_use]
+extern crate vulkano_shader_derive;
+
+#[macro_use]
 extern crate vulkano;
+
 extern crate vk_sys;
 extern crate vulkano_glfw;
 
@@ -19,6 +24,11 @@ use triangle::presentation::window_surface;
 use triangle::presentation::swap_chain_creation;
 use triangle::presentation::image_views;
 use triangle::pipeline::graphics_pipeline;
+use triangle::pipeline::shader_modules;
+use triangle::pipeline::fixed_functions;
+use triangle::pipeline::render_passes;
+use triangle::pipeline::graphics_pipeline_complete;
+use triangle::drawing::framebuffers;
 
 
 struct Command<'a> {
@@ -27,7 +37,7 @@ struct Command<'a> {
     main_function: fn(),
 }
 
-const TUTORIALS: &[Command; 9] = &[
+const TUTORIALS: &[Command; 14] = &[
     Command {
         name: "00_base_code",
         description: "Base code",
@@ -72,6 +82,31 @@ const TUTORIALS: &[Command; 9] = &[
         name: "08_graphics_pipeline",
         description: "Graphics pipeline",
         main_function: graphics_pipeline::app_main,
+    },
+    Command {
+        name: "09_shader_modules",
+        description: "Shader modules",
+        main_function: shader_modules::app_main,
+    },
+    Command {
+        name: "10_fixed_functions",
+        description: "Fixed functions",
+        main_function: fixed_functions::app_main,
+    },
+    Command {
+        name: "11_render_passes",
+        description: "Render passes",
+        main_function: render_passes::app_main,
+    },
+    Command {
+        name: "12_graphics_pipeline_complete",
+        description: "Graphics pipeline complete",
+        main_function: graphics_pipeline_complete::app_main,
+    },
+    Command {
+        name: "13_framebuffers",
+        description: "Framebuffers",
+        main_function: framebuffers::app_main,
     }
 ];
 
