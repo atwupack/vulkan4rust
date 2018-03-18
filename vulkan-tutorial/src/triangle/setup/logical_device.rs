@@ -1,5 +1,4 @@
-use glfw;
-use glfw::{Glfw,Window,WindowMode,WindowHint,ClientApiHint};
+use glfw::{Glfw,Window};
 
 use vulkano::instance;
 use vulkano::instance::{Features, ApplicationInfo, Version, Instance, InstanceExtensions, PhysicalDevice, QueueFamily, DeviceExtensions};
@@ -10,6 +9,10 @@ use vulkano_glfw as vg;
 
 use std::borrow::Cow;
 use std::sync::Arc;
+
+// import functions from previous parts
+use ::triangle::setup::base_code::init_window;
+
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
@@ -57,9 +60,8 @@ impl<'a> HelloTriangleApplication {
     }
 
     fn new() -> HelloTriangleApplication {
-        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
-        let window = init_window(&mut glfw);
+        let (glfw, window) = init_window(WIDTH, HEIGHT);
 
         // init vulkan instance
         let instance = create_instance(&glfw);
@@ -113,13 +115,6 @@ fn find_queue_families<'a>(glfw: &Glfw, device: &PhysicalDevice<'a> ) -> Option<
 
 fn debug_callback(msg: &Message) {
     println!("validation layer {}", msg.description)
-}
-
-fn init_window(glfw: &mut Glfw) -> Window {
-    glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
-    glfw.window_hint(WindowHint::Resizable(false));
-    let (window, _events) = glfw.create_window(WIDTH, HEIGHT, "Vulkan", WindowMode::Windowed).unwrap();
-    window
 }
 
 fn setup_debug_callback(instance: &Arc<Instance>) -> Option<DebugCallback> {

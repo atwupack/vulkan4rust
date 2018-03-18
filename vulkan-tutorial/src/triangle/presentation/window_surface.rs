@@ -1,5 +1,4 @@
-use glfw;
-use glfw::{Glfw,Window,WindowMode,WindowHint,ClientApiHint};
+use glfw::{Glfw,Window};
 
 use vulkano::instance;
 use vulkano::instance::{Features, ApplicationInfo, Version, Instance, InstanceExtensions, PhysicalDevice, QueueFamily, DeviceExtensions};
@@ -8,6 +7,9 @@ use vulkano::device::{Device, Queue};
 use vulkano::swapchain::Surface;
 
 use vulkano_glfw as vg;
+
+// import functions from previous parts
+use ::triangle::setup::base_code::init_window;
 
 use std::borrow::Cow;
 use std::sync::Arc;
@@ -60,9 +62,8 @@ impl<'a> HelloTriangleApplication {
     }
 
     fn new() -> HelloTriangleApplication {
-        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
 
-        let window = init_window(&mut glfw);
+        let (glfw, window) = init_window(WIDTH, HEIGHT);
 
         // init vulkan instance
         let instance = create_instance(&glfw);
@@ -103,8 +104,8 @@ fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>) -> Option<
 
 fn create_logical_device<'a>(glfw: &Glfw, phys: PhysicalDevice<'a>) -> (Arc<Device>, Arc<Queue>, Arc<Queue>) {
     let family = find_queue_families(glfw, &phys).unwrap();
-    let (device, mut qiter) = Device::new(phys, &Features::none(), 
-                                &DeviceExtensions::none(), 
+    let (device, mut qiter) = Device::new(phys, &Features::none(),
+                                &DeviceExtensions::none(),
                                 vec![(family, 1.0)]).unwrap();
     let queue = qiter.next().unwrap();
     (device, queue.clone(), queue.clone())
@@ -119,7 +120,7 @@ fn find_queue_families<'a>(glfw: &Glfw, device: &PhysicalDevice<'a> ) -> Option<
     for family in device.queue_families() {
         if family.supports_graphics() && vg::get_physical_device_presentation_support(glfw, &family)  {
             return Some(family);
-        } 
+        }
     };
 
     None
@@ -127,13 +128,6 @@ fn find_queue_families<'a>(glfw: &Glfw, device: &PhysicalDevice<'a> ) -> Option<
 
 fn debug_callback(msg: &Message) {
     println!("validation layer {}", msg.description)
-}
-
-fn init_window(glfw: &mut Glfw) -> Window {
-    glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
-    glfw.window_hint(WindowHint::Resizable(false));
-    let (window, _events) = glfw.create_window(WIDTH, HEIGHT, "Vulkan", WindowMode::Windowed).unwrap();
-    window
 }
 
 fn setup_debug_callback(instance: &Arc<Instance>) -> Option<DebugCallback> {

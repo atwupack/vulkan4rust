@@ -34,8 +34,7 @@ impl HelloTriangleApplication {
 
     fn new() -> HelloTriangleApplication {
         // initWindow stuff is here
-        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-        let window = init_window(&mut glfw);
+        let (glfw, window) = init_window(WIDTH, HEIGHT);
 
         HelloTriangleApplication {
             glfw: glfw,
@@ -44,11 +43,12 @@ impl HelloTriangleApplication {
     }
 }
 
-fn init_window(glfw: &mut Glfw) -> Window {
+pub fn init_window(width: u32, height: u32) -> (Glfw,Window) {
+    let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
     glfw.window_hint(WindowHint::Resizable(false));
-    let (window, _events) = glfw.create_window(WIDTH, HEIGHT, "Vulkan", WindowMode::Windowed).unwrap();
-    window
+    let (window, _events) = glfw.create_window(width, height, "Vulkan", WindowMode::Windowed).unwrap();
+    (glfw,window)
 }
 
 

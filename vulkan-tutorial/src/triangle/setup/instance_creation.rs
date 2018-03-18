@@ -1,5 +1,4 @@
-use glfw;
-use glfw::{Glfw,Window,WindowMode,WindowHint,ClientApiHint};
+use glfw::{Glfw,Window};
 
 use vulkano::instance::{ApplicationInfo, Version, Instance};
 
@@ -7,6 +6,9 @@ use vulkano_glfw as vg;
 
 use std::borrow::Cow;
 use std::sync::Arc;
+
+// import functions from previous parts
+use ::triangle::setup::base_code::init_window;
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
@@ -47,8 +49,7 @@ impl HelloTriangleApplication {
 
     fn new() -> HelloTriangleApplication {
         // initWindow stuff is here
-        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-        let window = init_window(&mut glfw);
+        let (glfw, window) = init_window(WIDTH, HEIGHT);
 
         // init Vulkan
         let instance = create_instance(&glfw);
@@ -61,12 +62,12 @@ impl HelloTriangleApplication {
     }
 }
 
-fn init_window(glfw: &mut Glfw) -> Window {
-    glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
-    glfw.window_hint(WindowHint::Resizable(false));
-    let (window, _events) = glfw.create_window(WIDTH, HEIGHT, "Vulkan", WindowMode::Windowed).unwrap();
-    window
-}
+// fn init_window(glfw: &mut Glfw) -> Window {
+//     glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
+//     glfw.window_hint(WindowHint::Resizable(false));
+//     let (window, _events) = glfw.create_window(WIDTH, HEIGHT, "Vulkan", WindowMode::Windowed).unwrap();
+//     window
+// }
 
 fn create_instance(glfw: &Glfw) -> Arc<Instance> {
     // initVulkan stuff is here
