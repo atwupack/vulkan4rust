@@ -84,7 +84,7 @@ impl<'a> HelloTriangleApplication {
     }
 }
 
-fn create_surface(instance: &Arc<Instance>, window: Window ) -> Arc<Surface<Window>> {
+pub fn create_surface(instance: &Arc<Instance>, window: Window ) -> Arc<Surface<Window>> {
     vg::create_window_surface(instance.clone(), window).unwrap()
 }
 

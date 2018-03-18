@@ -14,6 +14,7 @@ use vulkano_glfw as vg;
 use ::triangle::setup::base_code::init_window;
 use ::triangle::setup::validation_layers::create_instance;
 use ::triangle::setup::validation_layers::setup_debug_callback;
+use ::triangle::presentation::window_surface::create_surface;
 
 use std::sync::Arc;
 use std::cmp::{min, max};
@@ -99,11 +100,11 @@ impl<'a> HelloTriangleApplication {
     }
 }
 
-fn query_swap_chain_support(surface: &Arc<Surface<Window>>, device: PhysicalDevice) -> Capabilities {
+pub fn query_swap_chain_support(surface: &Arc<Surface<Window>>, device: PhysicalDevice) -> Capabilities {
     surface.capabilities(device).unwrap()
 }
 
-fn create_swap_chain(device: &Arc<Device>, surface: &Arc<Surface<Window>>, queue: &Arc<Queue>) -> (Arc<Swapchain<Window>>, Vec<Arc<SwapchainImage<Window>>>) {
+pub fn create_swap_chain(device: &Arc<Device>, surface: &Arc<Surface<Window>>, queue: &Arc<Queue>) -> (Arc<Swapchain<Window>>, Vec<Arc<SwapchainImage<Window>>>) {
     let caps = query_swap_chain_support(&surface, device.physical_device());
 
     let req_image_count = caps.min_image_count + 1;
@@ -178,10 +179,6 @@ fn choose_swap_extend(caps: &Capabilities) -> [u32;2] {
             [width, height]
         }
     }
-}
-
-fn create_surface(instance: &Arc<Instance>, window: Window ) -> Arc<Surface<Window>> {
-    vg::create_window_surface(instance.clone(), window).unwrap()
 }
 
 fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>, req_exts: &DeviceExtensions, surface: &Arc<Surface<Window>>) -> Option<PhysicalDevice<'a>> {
