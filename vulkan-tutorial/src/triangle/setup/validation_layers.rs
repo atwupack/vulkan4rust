@@ -75,7 +75,7 @@ fn debug_callback(msg: &Message) {
     println!("validation layer {}", msg.description)
 }
 
-fn setup_debug_callback(instance: &Arc<Instance>) -> Option<DebugCallback> {
+pub fn setup_debug_callback(instance: &Arc<Instance>) -> Option<DebugCallback> {
     if ENABLE_VALIDATION_LAYERS {
         DebugCallback::errors_and_warnings(instance,debug_callback).ok()
     }
@@ -84,7 +84,7 @@ fn setup_debug_callback(instance: &Arc<Instance>) -> Option<DebugCallback> {
     }
 }
 
-fn create_instance(glfw: &Glfw) -> Arc<Instance> {
+pub fn create_instance(glfw: &Glfw) -> Arc<Instance> {
     if ENABLE_VALIDATION_LAYERS && !check_validation_layer_support() {
         panic!("validation layers requested, but not available!");
     }

@@ -62,13 +62,6 @@ impl HelloTriangleApplication {
     }
 }
 
-// fn init_window(glfw: &mut Glfw) -> Window {
-//     glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
-//     glfw.window_hint(WindowHint::Resizable(false));
-//     let (window, _events) = glfw.create_window(WIDTH, HEIGHT, "Vulkan", WindowMode::Windowed).unwrap();
-//     window
-// }
-
 fn create_instance(glfw: &Glfw) -> Arc<Instance> {
     // initVulkan stuff is here
     let mut app_info = ApplicationInfo::default();
