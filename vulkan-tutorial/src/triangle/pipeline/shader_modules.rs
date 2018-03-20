@@ -24,7 +24,7 @@ use std::cmp::{min, max};
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 
-mod vs {
+pub mod vs {
     #[derive(VulkanoShader)]
     #[ty = "vertex"]
     #[src = "
@@ -57,7 +57,7 @@ void main() {
     struct Dummy;
 }
 
-mod fs {
+pub mod fs {
     #[derive(VulkanoShader)]
     #[ty = "fragment"]
     #[src = "

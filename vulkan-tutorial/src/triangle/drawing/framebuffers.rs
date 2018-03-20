@@ -3,13 +3,11 @@ use glfw::{Glfw,Window};
 use vulkano::instance::{Features, Instance, PhysicalDevice, QueueFamily, DeviceExtensions};
 use vulkano::instance::debug::{DebugCallback};
 use vulkano::device::{Device, Queue};
-use vulkano::swapchain::{Surface, Capabilities, SupportedPresentModes, ColorSpace, PresentMode, Swapchain, CompositeAlpha};
-use vulkano::format::Format;
-use vulkano::image::{ImageUsage, SwapchainImage};
+use vulkano::swapchain::{Surface, SupportedPresentModes, ColorSpace, PresentMode, Swapchain, CompositeAlpha};
+use vulkano::image::{ SwapchainImage};
 use vulkano::pipeline::GraphicsPipeline;
 use vulkano::pipeline::viewport::{Viewport, Scissor};
-use vulkano::sync::SharingMode;
-use vulkano::framebuffer::Subpass;
+use vulkano::framebuffer::{Subpass, Framebuffer};
 
 use vulkano_glfw as vg;
 
@@ -20,6 +18,7 @@ use ::triangle::setup::validation_layers::setup_debug_callback;
 use ::triangle::presentation::window_surface::create_surface;
 use ::triangle::presentation::swap_chain_creation::create_swap_chain;
 use ::triangle::presentation::swap_chain_creation::query_swap_chain_support;
+use ::triangle::pipeline::shader_modules::{vs, fs};
 
 use std::sync::Arc;
 use std::cmp::{min, max};
@@ -27,57 +26,6 @@ use std::ops::Range;
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
-
-mod vs {
-    #[derive(VulkanoShader)]
-    #[ty = "vertex"]
-    #[src = "
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
-out gl_PerVertex {
-    vec4 gl_Position;
-};
-
-layout(location = 0) out vec3 fragColor;
-
-vec2 positions[3] = vec2[](
-    vec2(0.0, -0.5),
-    vec2(0.5, 0.5),
-    vec2(-0.5, 0.5)
-);
-
-vec3 colors[3] = vec3[](
-    vec3(1.0, 0.0, 0.0),
-    vec3(0.0, 1.0, 0.0),
-    vec3(0.0, 0.0, 1.0)
-);
-
-void main() {
-    gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
-    fragColor = colors[gl_VertexIndex];
-}
-"]
-    struct Dummy;
-}
-
-mod fs {
-    #[derive(VulkanoShader)]
-    #[ty = "fragment"]
-    #[src = "
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
-layout(location = 0) in vec3 fragColor;
-
-layout(location = 0) out vec4 outColor;
-
-void main() {
-    outColor = vec4(fragColor, 1.0);
-}
-"]
-    struct Dummy;
-}
 
 pub fn app_main() {
     let mut app = HelloTriangleApplication::new();
@@ -142,7 +90,7 @@ impl<'a> HelloTriangleApplication {
         let (swap_chain, images) = create_swap_chain(&device, &surface, &graphics_queue);
 
         create_image_views();
-        create_graphics_pipeline(&device, &swap_chain);
+        create_graphics_pipeline(&device, &swap_chain, &images);
 
         HelloTriangleApplication {
             glfw: glfw,
@@ -161,7 +109,7 @@ impl<'a> HelloTriangleApplication {
 }
 
 
-fn create_graphics_pipeline(device: &Arc<Device>, swapchain: &Arc<Swapchain<Window>>) {
+fn create_graphics_pipeline(device: &Arc<Device>, swapchain: &Arc<Swapchain<Window>>, images: &Vec<Arc<SwapchainImage<Window>>>) {
     let vs = vs::Shader::load(device.clone()).expect("failed to create shader module");
     let fs = fs::Shader::load(device.clone()).expect("failed to create shader module");
 
@@ -204,6 +152,9 @@ fn create_graphics_pipeline(device: &Arc<Device>, swapchain: &Arc<Swapchain<Wind
         .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
         .build(device.clone())
         .unwrap();
+
+    let fb = Framebuffer::start(render_pass)
+        .add(images.into_iter().next().unwrap());
 }
 
 fn create_image_views() {
