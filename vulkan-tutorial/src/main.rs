@@ -14,22 +14,7 @@ extern crate vulkano_glfw;
 mod triangle;
 mod util;
 
-use triangle::setup::base_code;
-use triangle::setup::instance_creation;
-use triangle::setup::validation_layers;
-use triangle::setup::physical_device_selection;
-use triangle::setup::logical_device;
-use triangle::presentation::window_surface;
-use triangle::presentation::swap_chain_creation;
-use triangle::presentation::image_views;
-use triangle::pipeline::graphics_pipeline;
-use triangle::pipeline::shader_modules;
-use triangle::pipeline::fixed_functions;
-use triangle::pipeline::render_passes;
-use triangle::pipeline::graphics_pipeline_complete;
-use triangle::drawing::framebuffers;
-use triangle::drawing::command_buffers;
-use triangle::drawing::hello_triangle;
+use triangle::hello_triangle;
 
 struct Command<'a> {
     name: &'a str,
@@ -37,87 +22,12 @@ struct Command<'a> {
     main_function: fn(),
 }
 
-const TUTORIALS: &[Command; 16] = &[
+const TUTORIALS: &[Command; 1] = &[
     Command {
-        name: "00_base_code",
-        description: "Base code",
-        main_function: base_code::app_main,
-    },
-    Command {
-        name: "01_instance_creation",
-        description: "Instance",
-        main_function: instance_creation::app_main,
-    },
-    Command {
-        name: "02_validation_layers",
-        description: "Validation layers",
-        main_function: validation_layers::app_main,
-    },
-    Command {
-        name: "03_physical_device_selection",
-        description: "Physical devices and queue families",
-        main_function: physical_device_selection::app_main,
-    },
-    Command {
-        name: "04_logical_device",
-        description: "Logical device and queues",
-        main_function: logical_device::app_main,
-    },
-    Command {
-        name: "05_window_surface",
-        description: "Window surface",
-        main_function: window_surface::app_main,
-    },
-    Command {
-        name: "06_swap_chain_creation",
-        description: "Swap chain",
-        main_function: swap_chain_creation::app_main,
-    },
-    Command {
-        name: "07_image_views",
-        description: "Image views",
-        main_function: image_views::app_main,
-    },
-    Command {
-        name: "08_graphics_pipeline",
-        description: "Graphics pipeline",
-        main_function: graphics_pipeline::app_main,
-    },
-    Command {
-        name: "09_shader_modules",
-        description: "Shader modules",
-        main_function: shader_modules::app_main,
-    },
-    Command {
-        name: "10_fixed_functions",
-        description: "Fixed functions",
-        main_function: fixed_functions::app_main,
-    },
-    Command {
-        name: "11_render_passes",
-        description: "Render passes",
-        main_function: render_passes::app_main,
-    },
-    Command {
-        name: "12_graphics_pipeline_complete",
-        description: "Graphics pipeline complete",
-        main_function: graphics_pipeline_complete::app_main,
-    },
-    Command {
-        name: "13_framebuffers",
-        description: "Framebuffers",
-        main_function: framebuffers::app_main,
-    },
-    Command {
-        name: "14_command_buffers",
-        description: "Command buffers",
-        main_function: command_buffers::app_main,
-    },
-    Command {
-        name: "15_hello_triangle",
+        name: "hello_triangle",
         description: "Hello triangle",
         main_function: hello_triangle::app_main,
-    }
+    },
 ];
 
 const UTILS: &[Command; 1] = &[
