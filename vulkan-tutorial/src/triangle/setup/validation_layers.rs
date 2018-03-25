@@ -1,10 +1,11 @@
-use glfw::{Glfw,Window};
+use glfw::{Glfw};
 
 use vulkano::instance;
 use vulkano::instance::{ApplicationInfo, Version, Instance, InstanceExtensions};
 use vulkano::instance::debug::{DebugCallback, Message};
 
 use vulkano_glfw as vg;
+use vulkano_glfw::GlfwWindow;
 
 // import functions from previous parts
 use ::triangle::setup::base_code::init_window;
@@ -31,7 +32,7 @@ pub fn app_main() {
 
 struct HelloTriangleApplication {
     glfw: Glfw,
-    window: Window,
+    window: GlfwWindow,
     _instance: Arc<Instance>,
     _callback: Option<DebugCallback>,
 }

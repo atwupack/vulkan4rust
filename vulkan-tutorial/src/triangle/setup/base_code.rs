@@ -1,5 +1,7 @@
 use glfw;
-use glfw::{Glfw,Window,WindowMode,WindowHint,ClientApiHint};
+use glfw::{Glfw,WindowMode,WindowHint,ClientApiHint};
+
+use vulkano_glfw::{create_glfw_window, GlfwWindow};
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
@@ -12,7 +14,7 @@ pub fn app_main() {
 
 struct HelloTriangleApplication {
     glfw: Glfw,
-    window: Window,
+    window: GlfwWindow,
 }
 
 impl HelloTriangleApplication {
@@ -43,11 +45,11 @@ impl HelloTriangleApplication {
     }
 }
 
-pub fn init_window(width: u32, height: u32) -> (Glfw,Window) {
+pub fn init_window(width: u32, height: u32) -> (Glfw, GlfwWindow) {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
     glfw.window_hint(WindowHint::Resizable(false));
-    let (window, _events) = glfw.create_window(width, height, "Vulkan", WindowMode::Windowed).unwrap();
+    let (window, _events) = create_glfw_window(glfw, width, height, "Vulkan", WindowMode::Windowed).unwrap();
     (glfw,window)
 }
 

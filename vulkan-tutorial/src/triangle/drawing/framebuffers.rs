@@ -1,15 +1,16 @@
-use glfw::{Glfw,Window};
+use glfw::{Glfw};
 
 use vulkano::instance::{Features, Instance, PhysicalDevice, QueueFamily, DeviceExtensions};
 use vulkano::instance::debug::{DebugCallback};
 use vulkano::device::{Device, Queue};
-use vulkano::swapchain::{Surface, SupportedPresentModes, ColorSpace, PresentMode, Swapchain, CompositeAlpha};
+use vulkano::swapchain::{Surface, SupportedPresentModes, Swapchain};
 use vulkano::image::{ SwapchainImage};
 use vulkano::pipeline::GraphicsPipeline;
 use vulkano::pipeline::viewport::{Viewport, Scissor};
-use vulkano::framebuffer::{Subpass, Framebuffer};
+use vulkano::framebuffer::{Subpass, Framebuffer, RenderPass};
 
 use vulkano_glfw as vg;
+use vulkano_glfw::GlfwWindow;
 
 // import functions from previous parts
 use ::triangle::setup::base_code::init_window;
@@ -19,10 +20,9 @@ use ::triangle::presentation::window_surface::create_surface;
 use ::triangle::presentation::swap_chain_creation::create_swap_chain;
 use ::triangle::presentation::swap_chain_creation::query_swap_chain_support;
 use ::triangle::pipeline::shader_modules::{vs, fs};
+use ::triangle::pipeline::render_passes::{create_render_pass, CustomRenderPassDesc};
 
 use std::sync::Arc;
-use std::cmp::{min, max};
-use std::ops::Range;
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
@@ -46,9 +46,9 @@ struct HelloTriangleApplication {
     _device: Arc<Device>,
     _graphics_queue: Arc<Queue>,
     _present_queue: Arc<Queue>,
-    surface: Arc<Surface<Window>>,
-    _swap_chain: Arc<Swapchain<Window>>,
-    _swap_chain_images: Vec<Arc<SwapchainImage<Window>>>,
+    surface: Arc<Surface<GlfwWindow>>,
+    _swap_chain: Arc<Swapchain<GlfwWindow>>,
+    _swap_chain_images: Vec<Arc<SwapchainImage<GlfwWindow>>>,
 }
 
 impl<'a> HelloTriangleApplication {
@@ -87,10 +87,11 @@ impl<'a> HelloTriangleApplication {
         let physical_device = pick_physical_device(&glfw, &instance, &req_dev_exts, &surface).unwrap();
         let (device, graphics_queue, present_queue) = create_logical_device(&glfw, physical_device, &req_dev_exts);
 
-        let (swap_chain, images) = create_swap_chain(&device, &surface, &graphics_queue);
+        let (swapchain, images) = create_swap_chain(&device, &surface, &graphics_queue);
 
         create_image_views();
-        create_graphics_pipeline(&device, &swap_chain, &images);
+        let render_pass = create_render_pass(&device, &swapchain);
+        create_graphics_pipeline(&device, &swapchain, &render_pass, &images);
 
         HelloTriangleApplication {
             glfw: glfw,
@@ -102,24 +103,21 @@ impl<'a> HelloTriangleApplication {
             _graphics_queue: graphics_queue,
             _present_queue: present_queue,
             surface: surface,
-            _swap_chain: swap_chain,
+            _swap_chain: swapchain,
             _swap_chain_images: images,
         }
     }
 }
 
 
-fn create_graphics_pipeline(device: &Arc<Device>, swapchain: &Arc<Swapchain<Window>>, images: &Vec<Arc<SwapchainImage<Window>>>) {
+fn create_graphics_pipeline(device: &Arc<Device>, swapchain: &Arc<Swapchain<GlfwWindow>>, render_pass: &Arc<RenderPass<CustomRenderPassDesc>>, images: &Vec<Arc<SwapchainImage<GlfwWindow>>>) {
     let vs = vs::Shader::load(device.clone()).expect("failed to create shader module");
     let fs = fs::Shader::load(device.clone()).expect("failed to create shader module");
 
     let viewport = Viewport {
         origin: [0.0, 0.0],
         dimensions: [swapchain.dimensions()[0] as f32, swapchain.dimensions()[1] as f32],
-        depth_range: Range {
-            start: 0.0,
-            end: 1.0,
-        }
+        depth_range: 0.0 .. 1.0,
     };
 
     let scissor = Scissor {
@@ -127,24 +125,7 @@ fn create_graphics_pipeline(device: &Arc<Device>, swapchain: &Arc<Swapchain<Wind
         dimensions: swapchain.dimensions(),
     };
 
-    let render_pass = Arc::new(single_pass_renderpass!(device.clone(),
-        attachments: {
-            color: {
-                load: Clear,
-                store: Store,
-                format: swapchain.format(),
-                samples: 1,
-                //stencil_load: DontCare,
-                //stencil_store: DontCare,
-            }
-        },
-        pass: {
-            color: [color],
-            depth_stencil: {}
-        }
-    ).unwrap());
-
-    let pipeline = GraphicsPipeline::start()
+    let _pipeline = GraphicsPipeline::start()
         .vertex_shader(vs.main_entry_point(), ())
         .triangle_list()
         .viewports_scissors(Some((viewport, scissor)))
@@ -153,15 +134,18 @@ fn create_graphics_pipeline(device: &Arc<Device>, swapchain: &Arc<Swapchain<Wind
         .build(device.clone())
         .unwrap();
 
-    let fb = Framebuffer::start(render_pass)
-        .add(images.into_iter().next().unwrap());
+    let mut framebuffers = Vec::new();
+
+    for image in images {
+        framebuffers.push(Framebuffer::start(render_pass.clone()).add(image).unwrap().build().unwrap());
+    }
 }
 
 fn create_image_views() {
     // it seems this is not needed with vulkano
 }
 
-fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>, req_exts: &DeviceExtensions, surface: &Arc<Surface<Window>>) -> Option<PhysicalDevice<'a>> {
+fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>, req_exts: &DeviceExtensions, surface: &Arc<Surface<GlfwWindow>>) -> Option<PhysicalDevice<'a>> {
     for device in PhysicalDevice::enumerate(instance) {
         if is_device_suitable(glfw, device, req_exts, surface) {
             println!("Using device: {}", device.name());
@@ -180,7 +164,7 @@ fn create_logical_device<'a>(glfw: &Glfw, phys: PhysicalDevice<'a>, req_exts: &D
     (device, queue.clone(), queue.clone())
 }
 
-fn is_device_suitable<'a>(glfw: &Glfw, device: PhysicalDevice<'a>, req_exts: &DeviceExtensions, surface: &Arc<Surface<Window>>) -> bool {
+fn is_device_suitable<'a>(glfw: &Glfw, device: PhysicalDevice<'a>, req_exts: &DeviceExtensions, surface: &Arc<Surface<GlfwWindow>>) -> bool {
     let family = find_queue_families(glfw, device);
     let caps = query_swap_chain_support(surface, device);
     family.is_some() && surface.is_supported(family.unwrap()).unwrap() && check_device_extension_support(device, req_exts)

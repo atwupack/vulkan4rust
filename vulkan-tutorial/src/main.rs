@@ -6,7 +6,6 @@ use clap::*;
 #[macro_use]
 extern crate vulkano_shader_derive;
 
-#[macro_use]
 extern crate vulkano;
 
 extern crate vk_sys;
@@ -29,7 +28,8 @@ use triangle::pipeline::fixed_functions;
 use triangle::pipeline::render_passes;
 use triangle::pipeline::graphics_pipeline_complete;
 use triangle::drawing::framebuffers;
-
+use triangle::drawing::command_buffers;
+use triangle::drawing::hello_triangle;
 
 struct Command<'a> {
     name: &'a str,
@@ -37,7 +37,7 @@ struct Command<'a> {
     main_function: fn(),
 }
 
-const TUTORIALS: &[Command; 14] = &[
+const TUTORIALS: &[Command; 16] = &[
     Command {
         name: "00_base_code",
         description: "Base code",
@@ -107,6 +107,16 @@ const TUTORIALS: &[Command; 14] = &[
         name: "13_framebuffers",
         description: "Framebuffers",
         main_function: framebuffers::app_main,
+    },
+    Command {
+        name: "14_command_buffers",
+        description: "Command buffers",
+        main_function: command_buffers::app_main,
+    },
+    Command {
+        name: "15_hello_triangle",
+        description: "Hello triangle",
+        main_function: hello_triangle::app_main,
     }
 ];
 

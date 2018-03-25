@@ -1,15 +1,14 @@
-use glfw::{Glfw,Window};
+use glfw::{Glfw};
 
 use vulkano::instance::{Features, Instance, PhysicalDevice, QueueFamily, DeviceExtensions};
 use vulkano::instance::debug::{DebugCallback};
 use vulkano::device::{Device, Queue};
-use vulkano::swapchain::{Surface, Capabilities, SupportedPresentModes, ColorSpace, PresentMode, Swapchain, CompositeAlpha};
-use vulkano::format::Format;
-use vulkano::image::{ImageUsage, SwapchainImage};
+use vulkano::swapchain::{Surface, SupportedPresentModes, Swapchain};
+use vulkano::image::{SwapchainImage};
 use vulkano::pipeline::viewport::{Viewport, Scissor};
-use vulkano::sync::SharingMode;
 
 use vulkano_glfw as vg;
+use vulkano_glfw::GlfwWindow;
 
 // import functions from previous parts
 use ::triangle::setup::base_code::init_window;
@@ -21,8 +20,6 @@ use ::triangle::presentation::swap_chain_creation::query_swap_chain_support;
 use ::triangle::pipeline::shader_modules::{vs, fs};
 
 use std::sync::Arc;
-use std::cmp::{min, max};
-use std::ops::Range;
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
@@ -46,9 +43,9 @@ struct HelloTriangleApplication {
     _device: Arc<Device>,
     _graphics_queue: Arc<Queue>,
     _present_queue: Arc<Queue>,
-    surface: Arc<Surface<Window>>,
-    _swap_chain: Arc<Swapchain<Window>>,
-    _swap_chain_images: Vec<Arc<SwapchainImage<Window>>>,
+    surface: Arc<Surface<GlfwWindow>>,
+    _swap_chain: Arc<Swapchain<GlfwWindow>>,
+    _swap_chain_images: Vec<Arc<SwapchainImage<GlfwWindow>>>,
 }
 
 impl<'a> HelloTriangleApplication {
@@ -108,20 +105,17 @@ impl<'a> HelloTriangleApplication {
     }
 }
 
-fn create_graphics_pipeline(device: &Arc<Device>, swapchain: &Arc<Swapchain<Window>>) {
-    let vs = vs::Shader::load(device.clone()).expect("failed to create shader module");
-    let fs = fs::Shader::load(device.clone()).expect("failed to create shader module");
+fn create_graphics_pipeline(device: &Arc<Device>, swapchain: &Arc<Swapchain<GlfwWindow>>) {
+    let _vs = vs::Shader::load(device.clone()).expect("failed to create shader module");
+    let _fs = fs::Shader::load(device.clone()).expect("failed to create shader module");
 
-    let viewport = Viewport {
+    let _viewport = Viewport {
         origin: [0.0, 0.0],
         dimensions: [swapchain.dimensions()[0] as f32, swapchain.dimensions()[1] as f32],
-        depth_range: Range {
-            start: 0.0,
-            end: 1.0,
-        }
+        depth_range: 0.0 .. 1.0,
     };
 
-    let scissor = Scissor {
+    let _scissor = Scissor {
         origin: [0,0],
         dimensions: swapchain.dimensions(),
     };
@@ -131,7 +125,7 @@ fn create_image_views() {
     // it seems this is not needed with vulkano
 }
 
-fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>, req_exts: &DeviceExtensions, surface: &Arc<Surface<Window>>) -> Option<PhysicalDevice<'a>> {
+fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>, req_exts: &DeviceExtensions, surface: &Arc<Surface<GlfwWindow>>) -> Option<PhysicalDevice<'a>> {
     for device in PhysicalDevice::enumerate(instance) {
         if is_device_suitable(glfw, device, req_exts, surface) {
             println!("Using device: {}", device.name());
@@ -150,7 +144,7 @@ fn create_logical_device<'a>(glfw: &Glfw, phys: PhysicalDevice<'a>, req_exts: &D
     (device, queue.clone(), queue.clone())
 }
 
-fn is_device_suitable<'a>(glfw: &Glfw, device: PhysicalDevice<'a>, req_exts: &DeviceExtensions, surface: &Arc<Surface<Window>>) -> bool {
+fn is_device_suitable<'a>(glfw: &Glfw, device: PhysicalDevice<'a>, req_exts: &DeviceExtensions, surface: &Arc<Surface<GlfwWindow>>) -> bool {
     let family = find_queue_families(glfw, device);
     let caps = query_swap_chain_support(surface, device);
     family.is_some() && surface.is_supported(family.unwrap()).unwrap() && check_device_extension_support(device, req_exts)

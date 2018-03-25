@@ -3,10 +3,8 @@ use glfw::{Glfw};
 use vulkano::instance::{Features, Instance, PhysicalDevice, QueueFamily, DeviceExtensions};
 use vulkano::instance::debug::{DebugCallback};
 use vulkano::device::{Device, Queue};
-use vulkano::swapchain::{Surface, Capabilities, SupportedPresentModes, ColorSpace, PresentMode, Swapchain, CompositeAlpha};
-use vulkano::format::Format;
-use vulkano::image::{ImageUsage, SwapchainImage};
-use vulkano::sync::SharingMode;
+use vulkano::swapchain;
+use vulkano::swapchain::{Surface, SupportedPresentModes, Swapchain};
 
 use vulkano_glfw as vg;
 use vulkano_glfw::GlfwWindow;
@@ -16,9 +14,12 @@ use ::triangle::setup::base_code::init_window;
 use ::triangle::setup::validation_layers::create_instance;
 use ::triangle::setup::validation_layers::setup_debug_callback;
 use ::triangle::presentation::window_surface::create_surface;
+use ::triangle::presentation::swap_chain_creation::create_swap_chain;
+use ::triangle::presentation::swap_chain_creation::query_swap_chain_support;
+use ::triangle::drawing::command_buffers::create_graphics_pipeline;
+use ::triangle::pipeline::render_passes::{create_render_pass};
 
 use std::sync::Arc;
-use std::cmp::{min, max};
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
@@ -43,8 +44,7 @@ struct HelloTriangleApplication {
     _graphics_queue: Arc<Queue>,
     _present_queue: Arc<Queue>,
     surface: Arc<Surface<GlfwWindow>>,
-    _swap_chain: Arc<Swapchain<GlfwWindow>>,
-    _swap_chain_images: Vec<Arc<SwapchainImage<GlfwWindow>>>,
+    swap_chain: Arc<Swapchain<GlfwWindow>>,
 }
 
 impl<'a> HelloTriangleApplication {
@@ -57,7 +57,12 @@ impl<'a> HelloTriangleApplication {
     fn main_loop(&mut self) {
         while !self.surface.window().should_close() {
             self.glfw.poll_events();
+            self.draw_frame();
         }
+    }
+
+    fn draw_frame(&self) {
+        let (image_num, acquire_future) = swapchain::acquire_next_image(self.swap_chain.clone(), None).unwrap();
     }
 
     fn cleanup(&mut self) {
@@ -83,7 +88,11 @@ impl<'a> HelloTriangleApplication {
         let physical_device = pick_physical_device(&glfw, &instance, &req_dev_exts, &surface).unwrap();
         let (device, graphics_queue, present_queue) = create_logical_device(&glfw, physical_device, &req_dev_exts);
 
-        let (swap_chain, images) = create_swap_chain(&device, &surface, &graphics_queue);
+        let (swapchain, images) = create_swap_chain(&device, &surface, &graphics_queue);
+
+        create_image_views();
+        let render_pass = create_render_pass(&device, &swapchain);
+        create_graphics_pipeline(&device, &swapchain, &render_pass, images, &graphics_queue);
 
         HelloTriangleApplication {
             glfw: glfw,
@@ -95,91 +104,13 @@ impl<'a> HelloTriangleApplication {
             _graphics_queue: graphics_queue,
             _present_queue: present_queue,
             surface: surface,
-            _swap_chain: swap_chain,
-            _swap_chain_images: images,
+            swap_chain: swapchain,
         }
     }
 }
 
-pub fn query_swap_chain_support(surface: &Arc<Surface<GlfwWindow>>, device: PhysicalDevice) -> Capabilities {
-    surface.capabilities(device).unwrap()
-}
-
-pub fn create_swap_chain(device: &Arc<Device>, surface: &Arc<Surface<GlfwWindow>>, queue: &Arc<Queue>) -> (Arc<Swapchain<GlfwWindow>>, Vec<Arc<SwapchainImage<GlfwWindow>>>) {
-    let caps = query_swap_chain_support(&surface, device.physical_device());
-
-    let req_image_count = caps.min_image_count + 1;
-    let image_count = match caps.max_image_count {
-        Some(max_image) => if req_image_count > max_image {
-            max_image
-        }
-        else {
-            req_image_count
-        }
-        None => req_image_count,
-    };
-
-    let (format, _color_space) = choose_swap_surface_format(&caps);
-    let extend = choose_swap_extend(&caps);
-
-    Swapchain::new(device.clone(),
-                        surface.clone(),
-                        image_count,
-                        format,
-                        extend,
-                        1, // layers
-                        ImageUsage {
-                            color_attachment: true,
-                            .. ImageUsage::none()
-                        },
-                        SharingMode::from(queue),
-                        caps.current_transform,
-                        CompositeAlpha::Opaque,
-                        choose_swap_present_mode(&caps),
-                        true, // clipped
-                        None // old swapchain
-                        ).unwrap()
-}
-
-fn choose_swap_surface_format(caps: &Capabilities) -> (Format, ColorSpace) {
-    let avail_formats = &caps.supported_formats;
-    if avail_formats.len() == 0 {
-        (Format::B8G8R8Unorm, ColorSpace::SrgbNonLinear)
-    }
-    else {
-        if avail_formats.contains(&(Format::B8G8R8Unorm, ColorSpace::SrgbNonLinear)) {
-            (Format::B8G8R8Unorm, ColorSpace::SrgbNonLinear)
-        }
-        else {
-            avail_formats[0]
-        }
-    }
-}
-
-fn choose_swap_present_mode(caps: &Capabilities) -> PresentMode {
-    let avail_modes = caps.present_modes;
-    if avail_modes.mailbox {
-        PresentMode::Mailbox
-    }
-    else {
-        if avail_modes.immediate {
-            PresentMode::Immediate
-        }
-        else {
-            PresentMode::Fifo
-        }
-    }
-}
-
-fn choose_swap_extend(caps: &Capabilities) -> [u32;2] {
-    match caps.current_extent {
-        Some(e) => e,
-        None => {
-            let width = max(caps.min_image_extent[0], min(caps.max_image_extent[0], WIDTH));
-            let height = max(caps.min_image_extent[1], min(caps.max_image_extent[1], HEIGHT));
-            [width, height]
-        }
-    }
+fn create_image_views() {
+    // it seems this is not needed with vulkano
 }
 
 fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>, req_exts: &DeviceExtensions, surface: &Arc<Surface<GlfwWindow>>) -> Option<PhysicalDevice<'a>> {

@@ -1,8 +1,9 @@
-use glfw::{Glfw,Window};
+use glfw::{Glfw};
 
 use vulkano::instance::{ApplicationInfo, Version, Instance};
 
 use vulkano_glfw as vg;
+use vulkano_glfw::GlfwWindow;
 
 use std::borrow::Cow;
 use std::sync::Arc;
@@ -25,7 +26,7 @@ pub fn app_main() {
 
 struct HelloTriangleApplication {
     glfw: Glfw,
-    window: Window,
+    window: GlfwWindow,
     _instance: Arc<Instance>,
 }
 

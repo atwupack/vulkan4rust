@@ -1,4 +1,4 @@
-use glfw::{Glfw,Window};
+use glfw::{Glfw};
 
 use vulkano::instance::{Features, Instance, PhysicalDevice, QueueFamily, DeviceExtensions};
 use vulkano::instance::debug::{DebugCallback};
@@ -6,6 +6,7 @@ use vulkano::device::{Device, Queue};
 use vulkano::swapchain::Surface;
 
 use vulkano_glfw as vg;
+use vulkano_glfw::GlfwWindow;
 
 // import functions from previous parts
 use ::triangle::setup::base_code::init_window;
@@ -36,7 +37,7 @@ struct HelloTriangleApplication {
     _device: Arc<Device>,
     _graphics_queue: Arc<Queue>,
     _present_queue: Arc<Queue>,
-    surface: Arc<Surface<Window>>,
+    surface: Arc<Surface<GlfwWindow>>,
 }
 
 impl<'a> HelloTriangleApplication {
@@ -84,7 +85,7 @@ impl<'a> HelloTriangleApplication {
     }
 }
 
-pub fn create_surface(instance: &Arc<Instance>, window: Window ) -> Arc<Surface<Window>> {
+pub fn create_surface(instance: &Arc<Instance>, window: GlfwWindow ) -> Arc<Surface<GlfwWindow>> {
     vg::create_window_surface(instance.clone(), window).unwrap()
 }
 

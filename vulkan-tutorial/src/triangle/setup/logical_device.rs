@@ -1,10 +1,11 @@
-use glfw::{Glfw,Window};
+use glfw::{Glfw};
 
 use vulkano::instance::{Features, Instance, PhysicalDevice, QueueFamily, DeviceExtensions};
 use vulkano::instance::debug::{DebugCallback};
 use vulkano::device::{Device, Queue};
 
 use vulkano_glfw as vg;
+use vulkano_glfw::GlfwWindow;
 
 use std::sync::Arc;
 
@@ -28,7 +29,7 @@ pub fn app_main() {
 
 struct HelloTriangleApplication {
     glfw: Glfw,
-    window: Window,
+    window: GlfwWindow,
     _instance: Arc<Instance>,
     _callback: Option<DebugCallback>,
     _physical_device: usize,
