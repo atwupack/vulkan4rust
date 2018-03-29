@@ -7,18 +7,18 @@ use vulkano::instance::debug::{DebugCallback, Message};
 use vulkano::device::{Device, Queue};
 use vulkano::swapchain;
 use vulkano::swapchain::{Surface, Capabilities, SupportedPresentModes, ColorSpace, PresentMode, Swapchain, CompositeAlpha};
-use vulkano::format::Format;
+use vulkano::format::{Format, ClearValue};
 use vulkano::image::{ImageUsage, SwapchainImage, ImageLayout};
-use vulkano::sync::SharingMode;
-use vulkano::framebuffer::{ Subpass, Framebuffer, RenderPass,RenderPassDescClearValues, LoadOp, StoreOp, RenderPassDesc, LayoutAttachmentDescription, LayoutPassDescription, LayoutPassDependencyDescription};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
+use vulkano::sync::{SharingMode, GpuFuture};
+use vulkano::framebuffer::{ Subpass, Framebuffer, RenderPass,RenderPassDescClearValues,
+    LoadOp, StoreOp, RenderPassDesc, LayoutAttachmentDescription, LayoutPassDescription, LayoutPassDependencyDescription};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState, AutoCommandBuffer};
 use vulkano::pipeline::GraphicsPipeline;
 use vulkano::pipeline::vertex::BufferlessVertices;
 use vulkano::pipeline::viewport::{Viewport, Scissor};
-use vulkano::format::ClearValue;
 
 use vulkano_glfw as vg;
-use vulkano_glfw::{create_glfw_window, GlfwWindow};
+use vulkano_glfw::GlfwWindow;
 
 use std::sync::Arc;
 use std::cmp::{max, min};
@@ -30,54 +30,19 @@ const HEIGHT: u32 = 600;
 const VALIDATION_LAYERS: &[&str; 1] = &["VK_LAYER_LUNARG_standard_validation"];
 const ENABLE_VALIDATION_LAYERS: bool = cfg!(debug_assertions);
 
+#[allow(unused)]
 pub mod vs {
     #[derive(VulkanoShader)]
     #[ty = "vertex"]
-    #[src = "
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
-out gl_PerVertex {
-    vec4 gl_Position;
-};
-
-layout(location = 0) out vec3 fragColor;
-
-vec2 positions[3] = vec2[](
-    vec2(0.0, -0.5),
-    vec2(0.5, 0.5),
-    vec2(-0.5, 0.5)
-);
-
-vec3 colors[3] = vec3[](
-    vec3(1.0, 0.0, 0.0),
-    vec3(0.0, 1.0, 0.0),
-    vec3(0.0, 0.0, 1.0)
-);
-
-void main() {
-    gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0);
-    fragColor = colors[gl_VertexIndex];
-}
-"]
+    #[path = "src\\triangle\\shader.vert"]
     struct Dummy;
 }
 
+#[allow(unused)]
 pub mod fs {
     #[derive(VulkanoShader)]
     #[ty = "fragment"]
-    #[src = "
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
-layout(location = 0) in vec3 fragColor;
-
-layout(location = 0) out vec4 outColor;
-
-void main() {
-    outColor = vec4(fragColor, 1.0);
-}
-"]
+    #[path = "src\\triangle\\shader.frag"]
     struct Dummy;
 }
 
@@ -97,11 +62,11 @@ struct HelloTriangleApplication {
     _instance: Arc<Instance>,
     _callback: Option<DebugCallback>,
     _physical_device: usize,
-    _device: Arc<Device>,
-    _graphics_queue: Arc<Queue>,
+    device: Arc<Device>,
+    graphics_queue: Arc<Queue>,
     _present_queue: Arc<Queue>,
     surface: Arc<Surface<GlfwWindow>>,
-    swap_chain: Arc<Swapchain<GlfwWindow>>,
+    swapchain: Arc<Swapchain<GlfwWindow>>,
 }
 
 impl<'a> HelloTriangleApplication {
@@ -119,7 +84,20 @@ impl<'a> HelloTriangleApplication {
     }
 
     fn draw_frame(&self) {
-        let (image_num, acquire_future) = swapchain::acquire_next_image(self.swap_chain.clone(), None).unwrap();
+        // let command_buffer = AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.graphics_queue.family()).unwrap()
+        //     .begin_render_pass(fb.clone(), false, vec![[0.0, 0.0, 0.0, 1.0].into()]).unwrap()
+        //     .draw(pipeline.clone(),
+        //         DynamicState::none(),
+        //         BufferlessVertices {
+        //             vertices: 3,
+        //             instances: 1,
+        //         }, (),()).unwrap()
+        //     .end_render_pass().unwrap()
+        //     .build().unwrap();
+
+        // let (image_num, acquire_future) = swapchain::acquire_next_image(self.swapchain.clone(), None).unwrap();
+        // let future = acquire_future.then_execute(self.graphics_queue.clone(), command_buffer).unwrap();
+
     }
 
     fn cleanup(&mut self) {
@@ -148,7 +126,7 @@ impl<'a> HelloTriangleApplication {
         let (swapchain, images) = create_swap_chain(&device, &surface, &graphics_queue);
 
         let render_pass = create_render_pass(&device, &swapchain);
-        create_graphics_pipeline(&device, &swapchain, &render_pass, images, &graphics_queue);
+        let command_buffers = create_graphics_pipeline(&device, &swapchain, &render_pass, images, &graphics_queue);
 
         HelloTriangleApplication {
             glfw: glfw,
@@ -156,11 +134,11 @@ impl<'a> HelloTriangleApplication {
             _instance: instance.clone(),
             _callback: callback,
             _physical_device: physical_device.index(),
-            _device: device,
-            _graphics_queue: graphics_queue,
+            device: device,
+            graphics_queue: graphics_queue,
             _present_queue: present_queue,
             surface: surface,
-            swap_chain: swapchain,
+            swapchain: swapchain,
         }
     }
 }
@@ -195,19 +173,6 @@ fn create_graphics_pipeline(device: &Arc<Device>, swapchain: &Arc<Swapchain<Glfw
 
     for image in images {
         framebuffers.push(Arc::new(Framebuffer::start(render_pass.clone()).add(image).unwrap().build().unwrap()));
-    }
-
-    for fb in framebuffers {
-        let _cb = AutoCommandBufferBuilder::primary_one_time_submit(device.clone(), queue.family()).unwrap()
-            .begin_render_pass(fb.clone(), false, vec![[0.0, 0.0, 0.0, 1.0].into()]).unwrap()
-            .draw(pipeline.clone(),
-                DynamicState::none(),
-                BufferlessVertices {
-                    vertices: 3,
-                    instances: 1,
-                }, (),()).unwrap()
-            .end_render_pass().unwrap()
-            .build().unwrap();
     }
 }
 
@@ -351,11 +316,9 @@ fn choose_swap_extend(caps: &Capabilities) -> [u32;2] {
     }
 }
 
-
 fn create_surface(instance: &Arc<Instance>, window: GlfwWindow ) -> Arc<Surface<GlfwWindow>> {
     vg::create_window_surface(instance.clone(), window).unwrap()
 }
-
 
 fn pick_physical_device<'a>(glfw: &Glfw, instance: &'a Arc<Instance>, req_exts: &DeviceExtensions, surface: &Arc<Surface<GlfwWindow>>) -> Option<PhysicalDevice<'a>> {
     for device in PhysicalDevice::enumerate(instance) {
@@ -450,6 +413,6 @@ fn init_window(width: u32, height: u32) -> (Glfw, GlfwWindow) {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     glfw.window_hint(WindowHint::ClientApi(ClientApiHint::NoApi));
     glfw.window_hint(WindowHint::Resizable(false));
-    let (window, _events) = create_glfw_window(glfw, width, height, "Vulkan", WindowMode::Windowed).unwrap();
+    let (window, _events) = vg::create_glfw_window(glfw, width, height, "Vulkan", WindowMode::Windowed).unwrap();
     (glfw,window)
 }
