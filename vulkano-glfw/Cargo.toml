@@ -1,12 +1,15 @@
 [package]
 name = "vulkano-glfw"
-version = "0.5.0"
-authors = ["André Twupack <atwupack@mailbox.org>"]
-description = "Utility functions to use GLFW with Vulkano"
+version = "0.6.0"
+authors = ["André Twupack <atwupack@mailbox.org>", "braxtons12 <braxtonsalyer@gmail.com>"]
+description = "Utility functions to use GFLW with Vulkano"
 repository = "https://github.com/atwupack/vulkan4rust"
 license = "MIT"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-vulkano = "^0.8"
-vk-sys = "^0.3"
-glfw ={version = "^0.21", features = ["vulkan"]}
+vulkano = "^0.14.0"
+vk-sys = "^0.4.0"
+glfw = { version = "^0.32.0", features = ["vulkan"]}
