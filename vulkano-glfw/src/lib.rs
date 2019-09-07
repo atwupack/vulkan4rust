@@ -8,42 +8,13 @@ use std::error;
 use std::fmt;
 use std::ffi::CString;
 
-use std::sync::mpsc::Receiver;
 
 use vulkano::VulkanObject;
 use vulkano::instance::{Instance, InstanceExtensions, RawInstanceExtensions, QueueFamily};
 
 use vulkano::swapchain::{Surface};
 
-use glfw::{Window, Context, Glfw, WindowMode, WindowEvent};
-
-pub struct GlfwWindow {
-    window: Window,
-}
-
-impl From<Window> for GlfwWindow {
-    fn from(window: Window) -> Self {
-        GlfwWindow {
-            window: window,
-        }
-    }
-}
-
-pub fn create_glfw_window(glfw: Glfw, width: u32, height: u32, title: &str, mode: WindowMode) -> Option<(GlfwWindow, Receiver<(f64, WindowEvent)>)> {
-    match glfw.create_window(width, height, title, mode) {
-        Some((window, events)) => Some((GlfwWindow::from(window), events)),
-        None => None,
-    }
-}
-
-impl GlfwWindow {
-    pub fn should_close(&self) -> bool {
-        self.window.should_close()
-    }
-}
-
-unsafe impl Send for GlfwWindow {}
-unsafe impl Sync for GlfwWindow {}
+use glfw::{Window, Context, Glfw};
 
 /// error while creating a GLFW-based surface
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -63,7 +34,7 @@ impl error::Error for VulkanoGlfwError {
     }
 
     #[inline]
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             _ => None,
         }
@@ -78,9 +49,9 @@ impl fmt::Display for VulkanoGlfwError {
 }
 
 /// Create a surface from a GLFW window
-pub fn create_window_surface(instance: Arc<Instance>, window: GlfwWindow ) -> Result<Arc<Surface<GlfwWindow>>, VulkanoGlfwError> {
+pub fn create_window_surface(instance: Arc<Instance>, window: Window ) -> Result<Arc<Surface<Window>>, VulkanoGlfwError> {
     let internal_instance = instance.as_ref().internal_object();
-    let internal_window = window.window.window_ptr();
+    let internal_window = window.window_ptr();
     let mut internal_surface: vk_sys::SurfaceKHR = 0;
     let result = unsafe {
         glfw::ffi::glfwCreateWindowSurface(internal_instance, internal_window, ptr::null(), &mut internal_surface as *mut u64 )
